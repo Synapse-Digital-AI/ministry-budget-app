@@ -9,15 +9,47 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is already logged in
-    const token = authService.getToken();
-    const savedUser = authService.getCurrentUser();
+    // Verify token with backend before trusting localStorage
+    const checkAuth = async () => {
+      const token = authService.getToken();
+      const savedUser = authService.getCurrentUser();
+      
+      if (token && savedUser) {
+        try {
+          // Verify token is still valid with backend
+          const response = await authService.verify();
+          if (response.valid) {
+            setUser(savedUser);
+          } else {
+            // Token invalid, clear storage
+            authService.logout();
+            setUser(null);
+          }
+        } catch (error) {
+          // If it's a network error or backend is down, keep user logged in
+          // Only clear if it's a 401 (unauthorized) or 403 (forbidden) error
+          console.log('Auth verification error:', error.response?.status, error.message);
+          if (error.response?.status === 401 || error.response?.status === 403) {
+            // Token invalid or expired
+            console.log('Token invalid, logging out');
+            authService.logout();
+            setUser(null);
+          } else {
+            // Network error, backend down, or other error - keep user logged in from localStorage
+            // This prevents logout on temporary network issues
+            console.log('Network/backend error, keeping user logged in from localStorage');
+            setUser(savedUser);
+          }
+        }
+      } else {
+        // No token or user, ensure clean state
+        setUser(null);
+      }
+      
+      setLoading(false);
+    };
     
-    if (token && savedUser) {
-      setUser(savedUser);
-    }
-    
-    setLoading(false);
+    checkAuth();
   }, []);
 
   const login = async (email, pin) => {

@@ -1,15 +1,20 @@
-// src/App.jsx
+// src/App.jsx - UPDATED FOR PHASE 3.2
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import Header from './components/Common/Header';
+import ProtectedRoute from './components/ProtectedRoute';
 import Login from './components/Auth/Login';
 import Dashboard from './components/Dashboard/Dashboard';
+import FormView from './components/Forms/FormView';
+import FormCreate from './components/Forms/FormCreate';
+// Phase 3.2 components - uncomment when files are created
+// import FormBuilder from './components/Forms/FormBuilder';
+// import FormApproval from './components/Forms/FormApproval';
 
-// Protected Route Component
-const ProtectedRoute = ({ children, allowedRoles }) => {
+// Root route component that redirects based on auth status
+const RootRoute = () => {
   const { user, loading } = useAuth();
-
+  
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -17,35 +22,14 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
       </div>
     );
   }
-
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  return children;
+  
+  return user ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />;
 };
 
-// Layout Component
-const Layout = ({ children }) => {
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {children}
-      </main>
-    </div>
-  );
-};
-
-// Main App Component
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <Router>
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
@@ -55,135 +39,75 @@ function App() {
             path="/dashboard"
             element={
               <ProtectedRoute>
-                <Layout>
-                  <Dashboard />
-                </Layout>
+                <Dashboard />
               </ProtectedRoute>
             }
           />
 
-          {/* Placeholder routes - will be implemented in next phase */}
+          {/* Form Routes - Phase 3.2 */}
           <Route
-            path="/forms"
+            path="/forms/create"
             element={
-              <ProtectedRoute>
-                <Layout>
-                  <div className="text-center py-12">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                      Forms Management
-                    </h2>
-                    <p className="text-gray-600">Coming soon - Full form builder</p>
-                  </div>
-                </Layout>
+              <ProtectedRoute allowedRoles={['ministry_leader', 'admin']}>
+                <FormCreate />
               </ProtectedRoute>
             }
           />
-
+          
           <Route
             path="/forms/new"
             element={
               <ProtectedRoute allowedRoles={['ministry_leader', 'admin']}>
-                <Layout>
-                  <div className="text-center py-12">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                      Create New Form
-                    </h2>
-                    <p className="text-gray-600">Form builder coming in Phase 3.2</p>
-                  </div>
-                </Layout>
+                <FormCreate />
               </ProtectedRoute>
             }
           />
-
+          
           <Route
-            path="/forms/:id"
+            path="/forms/:id/view"
             element={
               <ProtectedRoute>
-                <Layout>
-                  <div className="text-center py-12">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                      View Form
-                    </h2>
-                    <p className="text-gray-600">Form viewer coming in Phase 3.2</p>
-                  </div>
-                </Layout>
+                <FormView />
               </ProtectedRoute>
             }
           />
-
-          <Route
+          
+          {/* Other form routes - uncomment when components are created */}
+          {/* <Route
             path="/forms/:id/edit"
             element={
               <ProtectedRoute allowedRoles={['ministry_leader', 'admin']}>
-                <Layout>
-                  <div className="text-center py-12">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                      Edit Form
-                    </h2>
-                    <p className="text-gray-600">Form editor coming in Phase 3.2</p>
-                  </div>
-                </Layout>
+                <FormBuilder />
               </ProtectedRoute>
             }
           />
-
+          
           <Route
             path="/forms/:id/approve"
             element={
               <ProtectedRoute allowedRoles={['pillar', 'pastor', 'admin']}>
-                <Layout>
-                  <div className="text-center py-12">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                      Approve Form
-                    </h2>
-                    <p className="text-gray-600">Approval UI coming in Phase 3.2</p>
-                  </div>
-                </Layout>
+                <FormApproval />
               </ProtectedRoute>
             }
-          />
+          /> */}
 
-          <Route
+          {/* Admin Routes - Coming in Phase 3.3 */}
+          {/* <Route
             path="/admin"
             element={
               <ProtectedRoute allowedRoles={['admin']}>
-                <Layout>
-                  <div className="text-center py-12">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                      Admin Panel
-                    </h2>
-                    <p className="text-gray-600">
-                      Ministries & Event Types management coming in Phase 3.2
-                    </p>
-                  </div>
-                </Layout>
+                <AdminDashboard />
               </ProtectedRoute>
             }
-          />
+          /> */}
 
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <div className="text-center py-12">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                      User Profile
-                    </h2>
-                    <p className="text-gray-600">Profile page coming in Phase 3.2</p>
-                  </div>
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Redirect root to login (will redirect to dashboard if authenticated) */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          {/* Default Route - redirects based on auth status */}
+          <Route path="/" element={<RootRoute />} />
           
-          {/* 404 */}
+          {/* 404 Route - redirect to login if not authenticated */}
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
-      </BrowserRouter>
+      </Router>
     </AuthProvider>
   );
 }

@@ -16,7 +16,7 @@ export default defineConfig({
   server: {
     port: 3000,
     host: '0.0.0.0', // Listen on all network interfaces
-    strictPort: false,
+    strictPort: true, // Fail if port 3000 is not available
     open: false, // Don't auto-open browser
     proxy: {
       '/api': {
