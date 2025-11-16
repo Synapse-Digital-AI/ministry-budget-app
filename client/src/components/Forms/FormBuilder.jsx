@@ -36,6 +36,8 @@ const FormBuilder = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [formData, setFormData] = useState({});
+  const [eventsComplete, setEventsComplete] = useState(false);
+  const [goalsComplete, setGoalsComplete] = useState(false);
 
   useEffect(() => {
     loadForm();
@@ -56,6 +58,16 @@ const FormBuilder = () => {
   };
 
   const handleSectionDataChange = (sectionKey, data) => {
+    // Handle events and goals completion status
+    if (sectionKey === 'events' && data.isComplete !== undefined) {
+      setEventsComplete(data.isComplete);
+      return; // Don't save events/goals data to formData
+    }
+    if (sectionKey === 'goals' && data.isComplete !== undefined) {
+      setGoalsComplete(data.isComplete);
+      return; // Don't save events/goals data to formData
+    }
+    
     setFormData(prev => ({
       ...prev,
       [sectionKey]: data
@@ -84,12 +96,23 @@ const FormBuilder = () => {
   };
 
   const handleSubmit = async () => {
+    // Check if all sections are complete
+    const incompleteSections = getIncompleteSections();
+    
+    if (incompleteSections.length > 0) {
+      const sectionNames = incompleteSections.map(s => s.title).join(', ');
+      setError(`Cannot submit form. The following sections are incomplete: ${sectionNames}`);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     if (!window.confirm('Are you sure you want to submit this form for approval? You will not be able to edit it after submission.')) {
       return;
     }
 
     try {
       setSaving(true);
+      setError(''); // Clear any previous errors
       await formsService.submitForm(id);
       setSuccess('Form submitted successfully!');
       setTimeout(() => {
@@ -117,17 +140,33 @@ const FormBuilder = () => {
     }
   };
 
+  const isSectionComplete = (sectionKey) => {
+    // Special handling for events and goals
+    if (sectionKey === 'events') {
+      return eventsComplete;
+    }
+    if (sectionKey === 'goals') {
+      return goalsComplete;
+    }
+    // For other sections, check if they have data
+    return formData[sectionKey] && Object.keys(formData[sectionKey]).length > 0;
+  };
+
   const getCompletionPercentage = () => {
     const totalSections = SECTIONS.length;
     let completed = 0;
     
     SECTIONS.forEach(section => {
-      if (formData[section.key] && Object.keys(formData[section.key]).length > 0) {
+      if (isSectionComplete(section.key)) {
         completed++;
       }
     });
     
     return Math.round((completed / totalSections) * 100);
+  };
+
+  const getIncompleteSections = () => {
+    return SECTIONS.filter(section => !isSectionComplete(section.key));
   };
 
   const renderCurrentSection = () => {
@@ -226,7 +265,7 @@ const FormBuilder = () => {
                   flex-shrink-0 px-4 py-2 rounded-lg font-medium text-sm transition-colors
                   ${currentSection === section.id
                     ? 'bg-church-primary text-white'
-                    : formData[section.key] && Object.keys(formData[section.key]).length > 0
+                    : isSectionComplete(section.key)
                       ? 'bg-green-100 text-green-800 hover:bg-green-200'
                       : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
                   }
@@ -291,7 +330,7 @@ const FormBuilder = () => {
             {currentSection === SECTIONS.length ? (
               <button
                 onClick={handleSubmit}
-                disabled={saving || completionPercentage < 80}
+                disabled={saving}
                 className="px-6 py-2 bg-church-primary text-white rounded-lg hover:bg-church-secondary font-medium flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Send className="w-4 h-4" />

@@ -36,10 +36,11 @@ router.get('/stats', async (req, res) => {
     // Get total budget (sum from section7 total_budget)
     const budgetResult = await pool.query(`
       SELECT 
-        COALESCE(SUM((sections->'section7'->>'total_budget')::numeric), 0) as total
-      FROM ministry_forms
-      WHERE status = 'approved'
-        AND sections->'section7'->>'total_budget' IS NOT NULL
+        COALESCE(SUM((fd.data->>'total_budget')::numeric), 0) as total
+      FROM ministry_forms mf
+      LEFT JOIN form_data fd ON mf.id = fd.form_id AND fd.section = 'section7'
+      WHERE mf.status = 'approved'
+        AND fd.data->>'total_budget' IS NOT NULL
     `);
     const totalBudget = parseFloat(budgetResult.rows[0].total || 0);
 

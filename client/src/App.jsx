@@ -11,6 +11,7 @@ import FormCreate from './components/Forms/FormCreate';
 import FormBuilder from './components/Forms/FormBuilder';
 import FormView from './components/Forms/FormView';
 import FormApproval from './components/Forms/FormApproval';
+import FormsList from './components/Forms/FormsList';
 
 // Phase 3.3 - Admin Components
 import AdminDashboard from './components/Admin/AdminDashboard';
@@ -42,6 +43,15 @@ function App() {
           />
 
           {/* Form Routes - Phase 3.2 */}
+          <Route
+            path="/forms"
+            element={
+              <ProtectedRoute>
+                <FormsList />
+              </ProtectedRoute>
+            }
+          />
+          
           <Route
             path="/forms/create"
             element={

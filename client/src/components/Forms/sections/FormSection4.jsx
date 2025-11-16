@@ -32,6 +32,10 @@ const FormSection4 = ({ formId, data, onChange }) => {
       ]);
       setEvents(eventsData);
       setEventTypes(typesData);
+      // Notify parent about completion status
+      if (onChange) {
+        onChange({ eventsCount: eventsData.length, isComplete: eventsData.length >= 1 });
+      }
     } catch (error) {
       console.error('Error loading events:', error);
     } finally {

@@ -43,11 +43,9 @@ router.get('/:id/export/pdf', async (req, res) => {
     const formResult = await pool.query(`
       SELECT 
         f.*,
-        m.name as ministry_name,
-        u.full_name as created_by_name
-      FROM forms f
-      JOIN ministries m ON f.ministry_id = m.id
-      JOIN users u ON f.created_by = u.id
+        u.name as created_by_name
+      FROM ministry_forms f
+      LEFT JOIN users u ON f.ministry_leader_id = u.id
       WHERE f.id = $1
     `, [id]);
 
@@ -57,9 +55,21 @@ router.get('/:id/export/pdf', async (req, res) => {
 
     const form = formResult.rows[0];
 
+    // Get form section data from form_data table
+    const sectionsResult = await pool.query(
+      'SELECT section, data FROM form_data WHERE form_id = $1',
+      [id]
+    );
+    
+    // Build sections object
+    const sections = {};
+    sectionsResult.rows.forEach(row => {
+      sections[row.section] = row.data;
+    });
+
     // Get events
     const eventsResult = await pool.query(
-      'SELECT * FROM events WHERE form_id = $1 ORDER BY event_date',
+      'SELECT *, estimated_expenses as budget_amount FROM events WHERE form_id = $1 ORDER BY event_date',
       [id]
     );
     const events = eventsResult.rows;
@@ -71,8 +81,6 @@ router.get('/:id/export/pdf', async (req, res) => {
       [id]
     );
     const goals = goalsResult.rows;
-
-    const sections = form.sections || {};
 
     // Calculate totals
     const eventsBudget = events.reduce((sum, e) => sum + parseFloat(e.budget_amount || 0), 0);
@@ -358,11 +366,9 @@ router.get('/:id/export/docx', async (req, res) => {
     const formResult = await pool.query(`
       SELECT 
         f.*,
-        m.name as ministry_name,
-        u.full_name as created_by_name
-      FROM forms f
-      JOIN ministries m ON f.ministry_id = m.id
-      JOIN users u ON f.created_by = u.id
+        u.name as created_by_name
+      FROM ministry_forms f
+      LEFT JOIN users u ON f.ministry_leader_id = u.id
       WHERE f.id = $1
     `, [id]);
 
@@ -372,9 +378,21 @@ router.get('/:id/export/docx', async (req, res) => {
 
     const form = formResult.rows[0];
 
+    // Get form section data from form_data table
+    const sectionsResult = await pool.query(
+      'SELECT section, data FROM form_data WHERE form_id = $1',
+      [id]
+    );
+    
+    // Build sections object
+    const sections = {};
+    sectionsResult.rows.forEach(row => {
+      sections[row.section] = row.data;
+    });
+
     // Get events
     const eventsResult = await pool.query(
-      'SELECT * FROM events WHERE form_id = $1 ORDER BY event_date',
+      'SELECT *, estimated_expenses as budget_amount FROM events WHERE form_id = $1 ORDER BY event_date',
       [id]
     );
     const events = eventsResult.rows;
@@ -386,8 +404,6 @@ router.get('/:id/export/docx', async (req, res) => {
       [id]
     );
     const goals = goalsResult.rows;
-
-    const sections = form.sections || {};
 
     // Calculate totals
     const eventsBudget = events.reduce((sum, e) => sum + parseFloat(e.budget_amount || 0), 0);
@@ -485,7 +501,7 @@ router.get('/:id/export/docx', async (req, res) => {
             spacing: { after: 600 }
           }),
 
-          // Section 1
+          // Section 1: Ministry Information
           ...(sections.section1 ? [
             new Paragraph({
               text: '1. Ministry Information',
@@ -505,6 +521,108 @@ router.get('/:id/export/docx', async (req, res) => {
                 new TextRun({ text: sections.section1.contact_email })
               ],
               spacing: { after: 100 }
+            })] : []),
+            ...(sections.section1.contact_phone ? [new Paragraph({
+              children: [
+                new TextRun({ text: 'Phone: ', bold: true }),
+                new TextRun({ text: sections.section1.contact_phone })
+              ],
+              spacing: { after: 100 }
+            })] : []),
+            ...(sections.section1.active_members ? [new Paragraph({
+              children: [
+                new TextRun({ text: 'Active Members: ', bold: true }),
+                new TextRun({ text: sections.section1.active_members.toString() })
+              ],
+              spacing: { after: 100 }
+            })] : []),
+            ...(sections.section1.description ? [new Paragraph({
+              children: [
+                new TextRun({ text: 'Description: ', bold: true })
+              ],
+              spacing: { after: 50 }
+            }), new Paragraph({
+              text: sections.section1.description,
+              spacing: { after: 200 }
+            })] : [])
+          ] : []),
+
+          // Section 2: Mission & Vision
+          ...(sections.section2 ? [
+            new Paragraph({
+              text: '2. Mission & Vision',
+              heading: 'Heading2',
+              spacing: { before: 400, after: 200 }
+            }),
+            ...(sections.section2.mission ? [new Paragraph({
+              children: [
+                new TextRun({ text: 'Mission Statement: ', bold: true })
+              ],
+              spacing: { after: 50 }
+            }), new Paragraph({
+              text: sections.section2.mission,
+              spacing: { after: 200 }
+            })] : []),
+            ...(sections.section2.vision ? [new Paragraph({
+              children: [
+                new TextRun({ text: 'Vision Statement: ', bold: true })
+              ],
+              spacing: { after: 50 }
+            }), new Paragraph({
+              text: sections.section2.vision,
+              spacing: { after: 200 }
+            })] : []),
+            ...(sections.section2.core_values ? [new Paragraph({
+              children: [
+                new TextRun({ text: 'Core Values: ', bold: true })
+              ],
+              spacing: { after: 50 }
+            }), new Paragraph({
+              text: sections.section2.core_values,
+              spacing: { after: 200 }
+            })] : [])
+          ] : []),
+
+          // Section 3: Programs & Activities
+          ...(sections.section3 ? [
+            new Paragraph({
+              text: '3. Programs & Activities',
+              heading: 'Heading2',
+              spacing: { before: 400, after: 200 }
+            }),
+            ...(sections.section3.current_programs ? [new Paragraph({
+              children: [
+                new TextRun({ text: 'Current Programs: ', bold: true })
+              ],
+              spacing: { after: 50 }
+            }), new Paragraph({
+              text: sections.section3.current_programs,
+              spacing: { after: 200 }
+            })] : []),
+            ...(sections.section3.target_audience ? [new Paragraph({
+              children: [
+                new TextRun({ text: 'Target Audience: ', bold: true })
+              ],
+              spacing: { after: 50 }
+            }), new Paragraph({
+              text: sections.section3.target_audience,
+              spacing: { after: 200 }
+            })] : []),
+            ...(sections.section3.proposed_programs ? [new Paragraph({
+              children: [
+                new TextRun({ text: 'Proposed New Programs: ', bold: true })
+              ],
+              spacing: { after: 50 }
+            }), new Paragraph({
+              text: sections.section3.proposed_programs,
+              spacing: { after: 200 }
+            })] : []),
+            ...(sections.section3.meeting_schedule ? [new Paragraph({
+              children: [
+                new TextRun({ text: 'Meeting Schedule: ', bold: true }),
+                new TextRun({ text: sections.section3.meeting_schedule })
+              ],
+              spacing: { after: 200 }
             })] : [])
           ] : []),
 
@@ -555,18 +673,84 @@ router.get('/:id/export/docx', async (req, res) => {
               new Paragraph({
                 children: [
                   new TextRun({ text: 'Specific: ', bold: true }),
-                  new TextRun({ text: goal.specific })
+                  new TextRun({ text: goal.specific || '' })
                 ],
                 spacing: { after: 100 }
               }),
               new Paragraph({
                 children: [
                   new TextRun({ text: 'Measurable: ', bold: true }),
-                  new TextRun({ text: goal.measurable })
+                  new TextRun({ text: goal.measurable || '' })
                 ],
                 spacing: { after: 100 }
+              }),
+              new Paragraph({
+                children: [
+                  new TextRun({ text: 'Achievable: ', bold: true }),
+                  new TextRun({ text: goal.achievable || '' })
+                ],
+                spacing: { after: 100 }
+              }),
+              new Paragraph({
+                children: [
+                  new TextRun({ text: 'Relevant: ', bold: true }),
+                  new TextRun({ text: goal.relevant || '' })
+                ],
+                spacing: { after: 100 }
+              }),
+              new Paragraph({
+                children: [
+                  new TextRun({ text: 'Time-bound: ', bold: true }),
+                  new TextRun({ text: goal.time_bound || '' })
+                ],
+                spacing: { after: 200 }
               })
             ])
+          ] : []),
+
+          // Section 6: Resources Needed
+          ...(sections.section6 ? [
+            new Paragraph({
+              text: '6. Resources Needed',
+              heading: 'Heading2',
+              spacing: { before: 400, after: 200 }
+            }),
+            ...(sections.section6.human_resources ? [new Paragraph({
+              children: [
+                new TextRun({ text: 'Human Resources: ', bold: true })
+              ],
+              spacing: { after: 50 }
+            }), new Paragraph({
+              text: sections.section6.human_resources,
+              spacing: { after: 200 }
+            })] : []),
+            ...(sections.section6.material_resources ? [new Paragraph({
+              children: [
+                new TextRun({ text: 'Material Resources: ', bold: true })
+              ],
+              spacing: { after: 50 }
+            }), new Paragraph({
+              text: sections.section6.material_resources,
+              spacing: { after: 200 }
+            })] : []),
+            ...(sections.section6.facility_needs ? [new Paragraph({
+              children: [
+                new TextRun({ text: 'Facility Needs: ', bold: true })
+              ],
+              spacing: { after: 50 }
+            }), new Paragraph({
+              text: sections.section6.facility_needs,
+              spacing: { after: 200 }
+            })] : []),
+            ...(sections.section6.technology_needs ? [new Paragraph({
+              children: [
+                new TextRun({ text: 'Technology Needs: ', bold: true })
+              ],
+              spacing: { after: 50 }
+            }), new Paragraph({
+              text: sections.section6.technology_needs,
+              spacing: { after: 200 }
+            })] : [])
           ] : []),
 
           // Budget Summary
@@ -603,6 +787,87 @@ router.get('/:id/export/docx', async (req, res) => {
               })
             ]
           }),
+          ...(sections.section7?.budget_justification ? [new Paragraph({
+            children: [
+              new TextRun({ text: 'Budget Justification: ', bold: true })
+            ],
+            spacing: { before: 200, after: 50 }
+          }), new Paragraph({
+            text: sections.section7.budget_justification,
+            spacing: { after: 200 }
+          })] : []),
+
+          // Section 8: Challenges & Opportunities
+          ...(sections.section8 ? [
+            new Paragraph({
+              text: '8. Challenges & Opportunities',
+              heading: 'Heading2',
+              spacing: { before: 400, after: 200 }
+            }),
+            ...(sections.section8.challenges ? [new Paragraph({
+              children: [
+                new TextRun({ text: 'Current Challenges: ', bold: true })
+              ],
+              spacing: { after: 50 }
+            }), new Paragraph({
+              text: sections.section8.challenges,
+              spacing: { after: 200 }
+            })] : []),
+            ...(sections.section8.opportunities ? [new Paragraph({
+              children: [
+                new TextRun({ text: 'Growth Opportunities: ', bold: true })
+              ],
+              spacing: { after: 50 }
+            }), new Paragraph({
+              text: sections.section8.opportunities,
+              spacing: { after: 200 }
+            })] : []),
+            ...(sections.section8.support_needed ? [new Paragraph({
+              children: [
+                new TextRun({ text: 'Support Needed: ', bold: true })
+              ],
+              spacing: { after: 50 }
+            }), new Paragraph({
+              text: sections.section8.support_needed,
+              spacing: { after: 200 }
+            })] : [])
+          ] : []),
+
+          // Section 9: Additional Information
+          ...(sections.section9 ? [
+            new Paragraph({
+              text: '9. Additional Information',
+              heading: 'Heading2',
+              spacing: { before: 400, after: 200 }
+            }),
+            ...(sections.section9.additional_notes ? [new Paragraph({
+              children: [
+                new TextRun({ text: 'Additional Notes: ', bold: true })
+              ],
+              spacing: { after: 50 }
+            }), new Paragraph({
+              text: sections.section9.additional_notes,
+              spacing: { after: 200 }
+            })] : []),
+            ...(sections.section9.special_requests ? [new Paragraph({
+              children: [
+                new TextRun({ text: 'Special Requests: ', bold: true })
+              ],
+              spacing: { after: 50 }
+            }), new Paragraph({
+              text: sections.section9.special_requests,
+              spacing: { after: 200 }
+            })] : []),
+            ...(sections.section9.other_information ? [new Paragraph({
+              children: [
+                new TextRun({ text: 'Other Information: ', bold: true })
+              ],
+              spacing: { after: 50 }
+            }), new Paragraph({
+              text: sections.section9.other_information,
+              spacing: { after: 200 }
+            })] : [])
+          ] : []),
 
           // Footer
           new Paragraph({

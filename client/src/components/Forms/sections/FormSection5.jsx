@@ -30,6 +30,10 @@ const FormSection5 = ({ formId, data, onChange }) => {
       setLoading(true);
       const data = await formsService.getGoals(formId);
       setGoals(data);
+      // Notify parent about completion status
+      if (onChange) {
+        onChange({ goalsCount: data.length, isComplete: data.length >= MIN_GOALS });
+      }
     } catch (error) {
       console.error('Error loading goals:', error);
     } finally {
