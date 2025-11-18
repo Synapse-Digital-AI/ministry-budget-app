@@ -4,6 +4,10 @@ import axios from 'axios';
 // Use environment variable for API URL, fallback to local proxy
 const API_URL = import.meta.env.VITE_API_URL || '';
 
+// Debug: Log the API URL being used
+console.log('🔧 VITE_API_URL:', import.meta.env.VITE_API_URL);
+console.log('🌐 Using API baseURL:', API_URL ? `${API_URL}/api` : '/api');
+
 const api = axios.create({
   baseURL: API_URL ? `${API_URL}/api` : '/api',
   headers: {

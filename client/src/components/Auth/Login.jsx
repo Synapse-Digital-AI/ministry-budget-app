@@ -174,13 +174,6 @@ const Login = () => {
             <div className="mt-4 pt-4 relative">
               <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
               
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-2xl p-3 mb-3 shadow-inner relative overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-100/0 via-blue-200/50 to-blue-100/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                <p className="text-gray-700 relative z-10 font-medium">
-                  Default PIN: <strong className="text-blue-700 text-sm">1234</strong>
-                </p>
-              </div>
-              
               <div className="space-y-2">
                 <p className="text-gray-700 font-bold text-sm">Need help? 💬</p>
                 <p className="text-gray-600 text-xs font-medium">Contact Betty Washington</p>
