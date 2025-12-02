@@ -2,6 +2,8 @@
 import React from 'react';
 import { Download, FileText, File } from 'lucide-react';
 
+import api from '../../services/api';
+
 const FormExport = ({ formId, formNumber, ministryName, status }) => {
   const [exporting, setExporting] = React.useState(false);
   const [exportType, setExportType] = React.useState('');
@@ -11,21 +13,13 @@ const FormExport = ({ formId, formNumber, ministryName, status }) => {
     setExportType(type);
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:3001/api/forms/${formId}/export/${type}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const response = await api.get(`/forms/${formId}/export/${type}`, {
+        responseType: 'blob'
       });
 
-      if (!response.ok) {
-        throw new Error('Export failed');
-      }
-
       // Get the blob from response
-      const blob = await response.blob();
-      
+      const blob = response.data;
+
       // Create download link
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -73,7 +67,7 @@ const FormExport = ({ formId, formNumber, ministryName, status }) => {
               </>
             )}
           </button>
-          
+
           <button
             onClick={() => handleExport('docx')}
             disabled={exporting}
