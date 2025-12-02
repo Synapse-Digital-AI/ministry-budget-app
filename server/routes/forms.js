@@ -111,9 +111,13 @@ router.get('/:id', async (req, res) => {
     const form = formResult.rows[0];
 
     // Check if user has permission to view
+    // Check if user has permission to view
+    // Ministry leaders can now view all forms (read-only if not theirs)
+    /* 
     if (role === 'ministry_leader' && form.ministry_leader_id !== userId) {
       return res.status(403).json({ error: 'You can only view your own forms' });
     }
+    */
 
     // Pillars can view all submitted forms
     if (role === 'pillar' && form.status === 'draft') {
@@ -353,7 +357,7 @@ router.put('/:id', async (req, res) => {
           [formId, sectionKey, JSON.stringify(sections[sectionKey])]
         );
       }
-      
+
       await pool.query(
         'UPDATE ministry_forms SET updated_at = CURRENT_TIMESTAMP WHERE id = $1',
         [formId]
@@ -559,7 +563,7 @@ router.post('/:id/approve', validateApproval, async (req, res) => {
         newStatus = 'pending_pastor';
         auditAction = 'pillar_approved';
         auditDetails = 'Form approved by pillar, sent to pastor';
-        
+
         await pool.query(
           `UPDATE ministry_forms 
            SET status = $1, 
@@ -573,7 +577,7 @@ router.post('/:id/approve', validateApproval, async (req, res) => {
         newStatus = 'approved';
         auditAction = 'pastor_approved';
         auditDetails = 'Form approved by pastor - FINAL APPROVAL';
-        
+
         await pool.query(
           `UPDATE ministry_forms 
            SET status = $1, 
@@ -618,7 +622,7 @@ router.post('/:id/approve', validateApproval, async (req, res) => {
       [formId, userId, auditAction, auditDetails]
     );
 
-    res.json({ 
+    res.json({
       message: `Form ${action}d successfully`,
       newStatus
     });
@@ -662,7 +666,7 @@ router.post('/:id/revoke', async (req, res) => {
       if (status === 'draft') {
         return res.status(400).json({ error: 'Cannot revoke a draft form' });
       }
-      
+
       // Reset form to pending_pillar status
       await pool.query(
         `UPDATE ministry_forms 
@@ -713,13 +717,13 @@ router.post('/:id/revoke', async (req, res) => {
         [formId, userId, 'admin_decision_revoked', `Admin revoked decision for form ${form_number}`]
       );
 
-      res.json({ 
+      res.json({
         message: 'Decision revoked successfully. Form reset to pending pillar approval.',
         newStatus: 'pending_pillar'
       });
       return;
     }
-    
+
     // Handle pillar revoke
     if (role === 'pillar') {
       // Pillar can revoke any form (except draft)
@@ -783,7 +787,7 @@ router.post('/:id/revoke', async (req, res) => {
         [formId, userId, 'pillar_decision_revoked', `Pillar revoked their decision for form ${form_number}`]
       );
 
-      res.json({ 
+      res.json({
         message: 'Decision revoked successfully. Form reset to pending pillar approval.',
         newStatus: 'pending_pillar'
       });
@@ -844,7 +848,7 @@ router.post('/:id/revoke', async (req, res) => {
         [formId, userId, 'pastor_decision_revoked', `Pastor revoked their decision for form ${form_number}`]
       );
 
-      res.json({ 
+      res.json({
         message: 'Decision revoked successfully. Form reset to pending pastor approval.',
         newStatus: 'pending_pastor'
       });
@@ -952,7 +956,7 @@ router.post('/:id/query', async (req, res) => {
       [formId, userId, 'pastor_query', `Pastor raised query: ${description}`]
     );
 
-    res.json({ 
+    res.json({
       message: 'Query sent successfully to pillar leaders',
       revoked: needsRevoke,
       newStatus: needsRevoke ? 'pending_pillar' : status,

@@ -32,9 +32,13 @@ router.get('/:formId/events', async (req, res) => {
     const form = formCheck.rows[0];
 
     // Check permissions
+    // Check permissions
+    // Ministry leaders can now view all events (read-only if not theirs)
+    /*
     if (role === 'ministry_leader' && form.ministry_leader_id !== userId) {
       return res.status(403).json({ error: 'You can only view events for your own forms' });
     }
+    */
 
     // Try to select with expected_attendance, fallback if column doesn't exist
     let result;
@@ -100,16 +104,16 @@ router.post('/:formId/events', async (req, res) => {
   try {
     const formId = parseInt(req.params.formId);
     const { id: userId, role } = req.user;
-    const { 
-      event_date, 
-      event_name, 
-      event_type, 
-      purpose, 
-      description, 
-      estimated_expenses, 
+    const {
+      event_date,
+      event_name,
+      event_type,
+      purpose,
+      description,
+      estimated_expenses,
       budget_amount,  // Support both field names
       expected_attendance,
-      notes 
+      notes
     } = req.body;
 
     // Check if user can edit this form
@@ -120,10 +124,10 @@ router.post('/:formId/events', async (req, res) => {
 
     // Use budget_amount if provided, otherwise use estimated_expenses
     const budgetValue = budget_amount !== undefined ? parseFloat(budget_amount) || 0 : (parseFloat(estimated_expenses) || 0);
-    
+
     // Convert expected_attendance to integer if provided
-    const attendanceValue = expected_attendance !== undefined && expected_attendance !== null && expected_attendance !== '' 
-      ? parseInt(expected_attendance) 
+    const attendanceValue = expected_attendance !== undefined && expected_attendance !== null && expected_attendance !== ''
+      ? parseInt(expected_attendance)
       : null;
 
     // Try to insert with expected_attendance, fallback if column doesn't exist
@@ -146,13 +150,13 @@ router.post('/:formId/events', async (req, res) => {
            notes,
            created_at`,
         [
-          formId, 
-          event_date || null, 
-          event_name || null, 
-          event_type || null, 
-          purpose || null, 
-          description || null, 
-          budgetValue, 
+          formId,
+          event_date || null,
+          event_name || null,
+          event_type || null,
+          purpose || null,
+          description || null,
+          budgetValue,
           attendanceValue,
           notes || null
         ]
@@ -178,13 +182,13 @@ router.post('/:formId/events', async (req, res) => {
              notes,
              created_at`,
           [
-            formId, 
-            event_date || null, 
-            event_name || null, 
-            event_type || null, 
-            purpose || null, 
-            description || null, 
-            budgetValue, 
+            formId,
+            event_date || null,
+            event_name || null,
+            event_type || null,
+            purpose || null,
+            description || null,
+            budgetValue,
             notes || null
           ]
         );
@@ -214,16 +218,16 @@ router.put('/:formId/events/:id', async (req, res) => {
     const formId = parseInt(req.params.formId);
     const eventId = parseInt(req.params.id);
     const { id: userId, role } = req.user;
-    const { 
-      event_date, 
-      event_name, 
-      event_type, 
-      purpose, 
-      description, 
-      estimated_expenses, 
+    const {
+      event_date,
+      event_name,
+      event_type,
+      purpose,
+      description,
+      estimated_expenses,
       budget_amount,  // Support both field names
       expected_attendance,
-      notes 
+      notes
     } = req.body;
 
     // Check if user can edit this form
@@ -244,10 +248,10 @@ router.put('/:formId/events/:id', async (req, res) => {
 
     // Use budget_amount if provided, otherwise use estimated_expenses
     const budgetValue = budget_amount !== undefined ? parseFloat(budget_amount) || 0 : (parseFloat(estimated_expenses) || 0);
-    
+
     // Convert expected_attendance to integer if provided
-    const attendanceValue = expected_attendance !== undefined && expected_attendance !== null && expected_attendance !== '' 
-      ? parseInt(expected_attendance) 
+    const attendanceValue = expected_attendance !== undefined && expected_attendance !== null && expected_attendance !== ''
+      ? parseInt(expected_attendance)
       : null;
 
     // Try to update with expected_attendance, fallback if column doesn't exist
@@ -272,15 +276,15 @@ router.put('/:formId/events/:id', async (req, res) => {
            notes,
            created_at`,
         [
-          event_date || null, 
-          event_name || null, 
-          event_type || null, 
-          purpose || null, 
-          description || null, 
-          budgetValue, 
+          event_date || null,
+          event_name || null,
+          event_type || null,
+          purpose || null,
+          description || null,
+          budgetValue,
           attendanceValue,
-          notes || null, 
-          eventId, 
+          notes || null,
+          eventId,
           formId
         ]
       );
@@ -307,14 +311,14 @@ router.put('/:formId/events/:id', async (req, res) => {
              notes,
              created_at`,
           [
-            event_date || null, 
-            event_name || null, 
-            event_type || null, 
-            purpose || null, 
-            description || null, 
-            budgetValue, 
-            notes || null, 
-            eventId, 
+            event_date || null,
+            event_name || null,
+            event_type || null,
+            purpose || null,
+            description || null,
+            budgetValue,
+            notes || null,
+            eventId,
             formId
           ]
         );

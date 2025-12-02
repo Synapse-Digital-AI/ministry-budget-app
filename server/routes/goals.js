@@ -32,9 +32,13 @@ router.get('/:formId/goals', async (req, res) => {
     const form = formCheck.rows[0];
 
     // Check permissions
+    // Check permissions
+    // Ministry leaders can now view all goals (read-only if not theirs)
+    /*
     if (role === 'ministry_leader' && form.ministry_leader_id !== userId) {
       return res.status(403).json({ error: 'You can only view goals for your own forms' });
     }
+    */
 
     // Try to select with SMART goal fields, fallback if columns don't exist
     let result;
@@ -111,7 +115,7 @@ router.post('/:formId/goals', async (req, res) => {
   try {
     const formId = parseInt(req.params.formId);
     const { id: userId, role } = req.user;
-    const { 
+    const {
       goal,  // Legacy field
       measure_target,  // Legacy field
       due_date,  // Legacy field
@@ -144,7 +148,7 @@ router.post('/:formId/goals', async (req, res) => {
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
          RETURNING *`,
         [
-          formId, 
+          formId,
           goalText,  // Store in legacy 'goal' field for compatibility
           goal_description || goalText,
           specific || null,
@@ -198,7 +202,7 @@ router.put('/:formId/goals/:id', async (req, res) => {
     const formId = parseInt(req.params.formId);
     const goalId = parseInt(req.params.id);
     const { id: userId, role } = req.user;
-    const { 
+    const {
       goal,  // Legacy field
       measure_target,  // Legacy field
       due_date,  // Legacy field

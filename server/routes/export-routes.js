@@ -60,7 +60,7 @@ router.get('/:id/export/pdf', async (req, res) => {
       'SELECT section, data FROM form_data WHERE form_id = $1',
       [id]
     );
-    
+
     // Build sections object
     const sections = {};
     sectionsResult.rows.forEach(row => {
@@ -108,7 +108,7 @@ router.get('/:id/export/pdf', async (req, res) => {
     const statusText = getStatusText(form.status);
     const statusX = 450;
     doc.fontSize(10).font('Helvetica-Bold');
-    
+
     // Color-coded status
     if (form.status === 'approved') {
       doc.fillColor('#10b981');
@@ -119,7 +119,7 @@ router.get('/:id/export/pdf', async (req, res) => {
     } else {
       doc.fillColor('#6b7280');
     }
-    
+
     doc.text(statusText, statusX, 50);
     doc.fillColor('#000000'); // Reset color
 
@@ -150,7 +150,7 @@ router.get('/:id/export/pdf', async (req, res) => {
       doc.fontSize(14).font('Helvetica-Bold').text('1. Ministry Information', 50, yPos);
       yPos += 25;
       doc.fontSize(10).font('Helvetica');
-      
+
       if (sections.section1.leader_name) {
         doc.text(`Leader: ${sections.section1.leader_name}`, 50, yPos);
         yPos += 15;
@@ -186,19 +186,66 @@ router.get('/:id/export/pdf', async (req, res) => {
       doc.fontSize(14).font('Helvetica-Bold').text('2. Mission & Vision', 50, yPos);
       yPos += 25;
       doc.fontSize(10).font('Helvetica');
-      
+
       if (sections.section2.mission) {
         doc.font('Helvetica-Bold').text('Mission Statement:', 50, yPos);
         yPos += 15;
         doc.font('Helvetica').text(sections.section2.mission, 50, yPos, { width: 500 });
         yPos += doc.heightOfString(sections.section2.mission, { width: 500 }) + 15;
       }
-      
+
       if (sections.section2.vision) {
         doc.font('Helvetica-Bold').text('Vision Statement:', 50, yPos);
         yPos += 15;
         doc.font('Helvetica').text(sections.section2.vision, 50, yPos, { width: 500 });
         yPos += doc.heightOfString(sections.section2.vision, { width: 500 }) + 15;
+      }
+
+      if (sections.section2.values) {
+        doc.font('Helvetica-Bold').text('Core Values:', 50, yPos);
+        yPos += 15;
+        doc.font('Helvetica').text(sections.section2.values, 50, yPos, { width: 500 });
+        yPos += doc.heightOfString(sections.section2.values, { width: 500 }) + 15;
+      }
+    }
+
+    // Section 3: Programs & Activities
+    if (sections.section3) {
+      if (yPos > 650) {
+        doc.addPage();
+        yPos = 50;
+      }
+      yPos += 20;
+      doc.fontSize(14).font('Helvetica-Bold').text('3. Programs & Activities', 50, yPos);
+      yPos += 25;
+      doc.fontSize(10).font('Helvetica');
+
+      if (sections.section3.current_programs) {
+        doc.font('Helvetica-Bold').text('Current Programs:', 50, yPos);
+        yPos += 15;
+        doc.font('Helvetica').text(sections.section3.current_programs, 50, yPos, { width: 500 });
+        yPos += doc.heightOfString(sections.section3.current_programs, { width: 500 }) + 15;
+      }
+
+      if (sections.section3.target_audience) {
+        doc.font('Helvetica-Bold').text('Target Audience:', 50, yPos);
+        yPos += 15;
+        doc.font('Helvetica').text(sections.section3.target_audience, 50, yPos, { width: 500 });
+        yPos += doc.heightOfString(sections.section3.target_audience, { width: 500 }) + 15;
+      }
+
+      if (sections.section3.proposed_programs) {
+        doc.font('Helvetica-Bold').text('Proposed New Programs:', 50, yPos);
+        yPos += 15;
+        doc.font('Helvetica').text(sections.section3.proposed_programs, 50, yPos, { width: 500 });
+        yPos += doc.heightOfString(sections.section3.proposed_programs, { width: 500 }) + 15;
+      }
+
+      if (sections.section3.meeting_schedule) {
+        doc.font('Helvetica-Bold').text('Meeting Schedule:', 50, yPos);
+        yPos += 15;
+        doc.font('Helvetica').text(sections.section3.meeting_schedule, 50, yPos, { width: 500 });
+        yPos += doc.heightOfString(sections.section3.meeting_schedule, { width: 500 }) + 15;
       }
     }
 
@@ -300,6 +347,57 @@ router.get('/:id/export/pdf', async (req, res) => {
       });
     }
 
+    // Section 6: Resources Needed
+    if (sections.section6) {
+      doc.addPage();
+      yPos = 50;
+      doc.fontSize(14).font('Helvetica-Bold').text('6. Resources Needed', 50, yPos);
+      yPos += 25;
+      doc.fontSize(10).font('Helvetica');
+
+      if (sections.section6.personnel_needs) {
+        doc.font('Helvetica-Bold').text('Personnel Needs:', 50, yPos);
+        yPos += 15;
+        doc.font('Helvetica').text(sections.section6.personnel_needs, 50, yPos, { width: 500 });
+        yPos += doc.heightOfString(sections.section6.personnel_needs, { width: 500 }) + 15;
+      }
+
+      if (sections.section6.equipment_needs) {
+        doc.font('Helvetica-Bold').text('Equipment & Materials:', 50, yPos);
+        yPos += 15;
+        doc.font('Helvetica').text(sections.section6.equipment_needs, 50, yPos, { width: 500 });
+        yPos += doc.heightOfString(sections.section6.equipment_needs, { width: 500 }) + 15;
+      }
+
+      if (sections.section6.facility_needs) {
+        doc.font('Helvetica-Bold').text('Facility Requirements:', 50, yPos);
+        yPos += 15;
+        doc.font('Helvetica').text(sections.section6.facility_needs, 50, yPos, { width: 500 });
+        yPos += doc.heightOfString(sections.section6.facility_needs, { width: 500 }) + 15;
+      }
+
+      if (sections.section6.technology_needs) {
+        doc.font('Helvetica-Bold').text('Technology & Software:', 50, yPos);
+        yPos += 15;
+        doc.font('Helvetica').text(sections.section6.technology_needs, 50, yPos, { width: 500 });
+        yPos += doc.heightOfString(sections.section6.technology_needs, { width: 500 }) + 15;
+      }
+
+      if (sections.section6.training_needs) {
+        doc.font('Helvetica-Bold').text('Training & Development:', 50, yPos);
+        yPos += 15;
+        doc.font('Helvetica').text(sections.section6.training_needs, 50, yPos, { width: 500 });
+        yPos += doc.heightOfString(sections.section6.training_needs, { width: 500 }) + 15;
+      }
+
+      if (sections.section6.other_needs) {
+        doc.font('Helvetica-Bold').text('Other Resources:', 50, yPos);
+        yPos += 15;
+        doc.font('Helvetica').text(sections.section6.other_needs, 50, yPos, { width: 500 });
+        yPos += doc.heightOfString(sections.section6.other_needs, { width: 500 }) + 15;
+      }
+    }
+
     // Section 7: Budget Summary
     doc.addPage();
     yPos = 50;
@@ -339,6 +437,116 @@ router.get('/:id/export/pdf', async (req, res) => {
       doc.fontSize(10).font('Helvetica-Bold').text('Budget Justification:', 50, yPos);
       yPos += 15;
       doc.font('Helvetica').text(sections.section7.budget_justification, 50, yPos, { width: 500 });
+      yPos += doc.heightOfString(sections.section7.budget_justification, { width: 500 }) + 15;
+    }
+
+    if (sections.section7?.funding_sources) {
+      doc.font('Helvetica-Bold').text('Funding Sources:', 50, yPos);
+      yPos += 15;
+      doc.font('Helvetica').text(sections.section7.funding_sources, 50, yPos, { width: 500 });
+      yPos += doc.heightOfString(sections.section7.funding_sources, { width: 500 }) + 15;
+    }
+
+    if (sections.section7?.previous_year_comparison) {
+      doc.font('Helvetica-Bold').text('Previous Year Comparison:', 50, yPos);
+      yPos += 15;
+      doc.font('Helvetica').text(sections.section7.previous_year_comparison, 50, yPos, { width: 500 });
+      yPos += doc.heightOfString(sections.section7.previous_year_comparison, { width: 500 }) + 15;
+    }
+
+    // Section 8: Challenges & Opportunities
+    if (sections.section8) {
+      doc.addPage();
+      yPos = 50;
+      doc.fontSize(14).font('Helvetica-Bold').text('8. Challenges & Opportunities', 50, yPos);
+      yPos += 25;
+      doc.fontSize(10).font('Helvetica');
+
+      if (sections.section8.challenges) {
+        doc.font('Helvetica-Bold').text('Current Challenges:', 50, yPos);
+        yPos += 15;
+        doc.font('Helvetica').text(sections.section8.challenges, 50, yPos, { width: 500 });
+        yPos += doc.heightOfString(sections.section8.challenges, { width: 500 }) + 15;
+      }
+
+      if (sections.section8.solutions) {
+        doc.font('Helvetica-Bold').text('Proposed Solutions:', 50, yPos);
+        yPos += 15;
+        doc.font('Helvetica').text(sections.section8.solutions, 50, yPos, { width: 500 });
+        yPos += doc.heightOfString(sections.section8.solutions, { width: 500 }) + 15;
+      }
+
+      if (sections.section8.opportunities) {
+        doc.font('Helvetica-Bold').text('Growth Opportunities:', 50, yPos);
+        yPos += 15;
+        doc.font('Helvetica').text(sections.section8.opportunities, 50, yPos, { width: 500 });
+        yPos += doc.heightOfString(sections.section8.opportunities, { width: 500 }) + 15;
+      }
+
+      if (sections.section8.support_needed) {
+        doc.font('Helvetica-Bold').text('Support Needed:', 50, yPos);
+        yPos += 15;
+        doc.font('Helvetica').text(sections.section8.support_needed, 50, yPos, { width: 500 });
+        yPos += doc.heightOfString(sections.section8.support_needed, { width: 500 }) + 15;
+      }
+
+      if (sections.section8.collaboration) {
+        doc.font('Helvetica-Bold').text('Collaboration Opportunities:', 50, yPos);
+        yPos += 15;
+        doc.font('Helvetica').text(sections.section8.collaboration, 50, yPos, { width: 500 });
+        yPos += doc.heightOfString(sections.section8.collaboration, { width: 500 }) + 15;
+      }
+    }
+
+    // Section 9: Additional Information
+    if (sections.section9) {
+      doc.addPage();
+      yPos = 50;
+      doc.fontSize(14).font('Helvetica-Bold').text('9. Additional Information', 50, yPos);
+      yPos += 25;
+      doc.fontSize(10).font('Helvetica');
+
+      if (sections.section9.success_stories) {
+        doc.font('Helvetica-Bold').text('Success Stories & Testimonials:', 50, yPos);
+        yPos += 15;
+        doc.font('Helvetica').text(sections.section9.success_stories, 50, yPos, { width: 500 });
+        yPos += doc.heightOfString(sections.section9.success_stories, { width: 500 }) + 15;
+      }
+
+      if (sections.section9.communication_plan) {
+        doc.font('Helvetica-Bold').text('Communication Plan:', 50, yPos);
+        yPos += 15;
+        doc.font('Helvetica').text(sections.section9.communication_plan, 50, yPos, { width: 500 });
+        yPos += doc.heightOfString(sections.section9.communication_plan, { width: 500 }) + 15;
+      }
+
+      if (sections.section9.volunteer_management) {
+        doc.font('Helvetica-Bold').text('Volunteer Management:', 50, yPos);
+        yPos += 15;
+        doc.font('Helvetica').text(sections.section9.volunteer_management, 50, yPos, { width: 500 });
+        yPos += doc.heightOfString(sections.section9.volunteer_management, { width: 500 }) + 15;
+      }
+
+      if (sections.section9.evaluation_metrics) {
+        doc.font('Helvetica-Bold').text('Evaluation & Metrics:', 50, yPos);
+        yPos += 15;
+        doc.font('Helvetica').text(sections.section9.evaluation_metrics, 50, yPos, { width: 500 });
+        yPos += doc.heightOfString(sections.section9.evaluation_metrics, { width: 500 }) + 15;
+      }
+
+      if (sections.section9.long_term_vision) {
+        doc.font('Helvetica-Bold').text('Long-Term Vision:', 50, yPos);
+        yPos += 15;
+        doc.font('Helvetica').text(sections.section9.long_term_vision, 50, yPos, { width: 500 });
+        yPos += doc.heightOfString(sections.section9.long_term_vision, { width: 500 }) + 15;
+      }
+
+      if (sections.section9.additional_comments) {
+        doc.font('Helvetica-Bold').text('Additional Comments:', 50, yPos);
+        yPos += 15;
+        doc.font('Helvetica').text(sections.section9.additional_comments, 50, yPos, { width: 500 });
+        yPos += doc.heightOfString(sections.section9.additional_comments, { width: 500 }) + 15;
+      }
     }
 
     // Footer on last page
@@ -383,7 +591,7 @@ router.get('/:id/export/docx', async (req, res) => {
       'SELECT section, data FROM form_data WHERE form_id = $1',
       [id]
     );
-    
+
     // Build sections object
     const sections = {};
     sectionsResult.rows.forEach(row => {
@@ -572,13 +780,13 @@ router.get('/:id/export/docx', async (req, res) => {
               text: sections.section2.vision,
               spacing: { after: 200 }
             })] : []),
-            ...(sections.section2.core_values ? [new Paragraph({
+            ...(sections.section2.values ? [new Paragraph({
               children: [
                 new TextRun({ text: 'Core Values: ', bold: true })
               ],
               spacing: { after: 50 }
             }), new Paragraph({
-              text: sections.section2.core_values,
+              text: sections.section2.values,
               spacing: { after: 200 }
             })] : [])
           ] : []),
@@ -715,27 +923,27 @@ router.get('/:id/export/docx', async (req, res) => {
               heading: 'Heading2',
               spacing: { before: 400, after: 200 }
             }),
-            ...(sections.section6.human_resources ? [new Paragraph({
+            ...(sections.section6.personnel_needs ? [new Paragraph({
               children: [
-                new TextRun({ text: 'Human Resources: ', bold: true })
+                new TextRun({ text: 'Personnel Needs: ', bold: true })
               ],
               spacing: { after: 50 }
             }), new Paragraph({
-              text: sections.section6.human_resources,
+              text: sections.section6.personnel_needs,
               spacing: { after: 200 }
             })] : []),
-            ...(sections.section6.material_resources ? [new Paragraph({
+            ...(sections.section6.equipment_needs ? [new Paragraph({
               children: [
-                new TextRun({ text: 'Material Resources: ', bold: true })
+                new TextRun({ text: 'Equipment & Materials: ', bold: true })
               ],
               spacing: { after: 50 }
             }), new Paragraph({
-              text: sections.section6.material_resources,
+              text: sections.section6.equipment_needs,
               spacing: { after: 200 }
             })] : []),
             ...(sections.section6.facility_needs ? [new Paragraph({
               children: [
-                new TextRun({ text: 'Facility Needs: ', bold: true })
+                new TextRun({ text: 'Facility Requirements: ', bold: true })
               ],
               spacing: { after: 50 }
             }), new Paragraph({
@@ -744,11 +952,29 @@ router.get('/:id/export/docx', async (req, res) => {
             })] : []),
             ...(sections.section6.technology_needs ? [new Paragraph({
               children: [
-                new TextRun({ text: 'Technology Needs: ', bold: true })
+                new TextRun({ text: 'Technology & Software: ', bold: true })
               ],
               spacing: { after: 50 }
             }), new Paragraph({
               text: sections.section6.technology_needs,
+              spacing: { after: 200 }
+            })] : []),
+            ...(sections.section6.training_needs ? [new Paragraph({
+              children: [
+                new TextRun({ text: 'Training & Development: ', bold: true })
+              ],
+              spacing: { after: 50 }
+            }), new Paragraph({
+              text: sections.section6.training_needs,
+              spacing: { after: 200 }
+            })] : []),
+            ...(sections.section6.other_needs ? [new Paragraph({
+              children: [
+                new TextRun({ text: 'Other Resources: ', bold: true })
+              ],
+              spacing: { after: 50 }
+            }), new Paragraph({
+              text: sections.section6.other_needs,
               spacing: { after: 200 }
             })] : [])
           ] : []),
@@ -796,6 +1022,24 @@ router.get('/:id/export/docx', async (req, res) => {
             text: sections.section7.budget_justification,
             spacing: { after: 200 }
           })] : []),
+          ...(sections.section7?.funding_sources ? [new Paragraph({
+            children: [
+              new TextRun({ text: 'Funding Sources: ', bold: true })
+            ],
+            spacing: { before: 200, after: 50 }
+          }), new Paragraph({
+            text: sections.section7.funding_sources,
+            spacing: { after: 200 }
+          })] : []),
+          ...(sections.section7?.previous_year_comparison ? [new Paragraph({
+            children: [
+              new TextRun({ text: 'Previous Year Comparison: ', bold: true })
+            ],
+            spacing: { before: 200, after: 50 }
+          }), new Paragraph({
+            text: sections.section7.previous_year_comparison,
+            spacing: { after: 200 }
+          })] : []),
 
           // Section 8: Challenges & Opportunities
           ...(sections.section8 ? [
@@ -811,6 +1055,15 @@ router.get('/:id/export/docx', async (req, res) => {
               spacing: { after: 50 }
             }), new Paragraph({
               text: sections.section8.challenges,
+              spacing: { after: 200 }
+            })] : []),
+            ...(sections.section8.solutions ? [new Paragraph({
+              children: [
+                new TextRun({ text: 'Proposed Solutions: ', bold: true })
+              ],
+              spacing: { after: 50 }
+            }), new Paragraph({
+              text: sections.section8.solutions,
               spacing: { after: 200 }
             })] : []),
             ...(sections.section8.opportunities ? [new Paragraph({
@@ -830,6 +1083,15 @@ router.get('/:id/export/docx', async (req, res) => {
             }), new Paragraph({
               text: sections.section8.support_needed,
               spacing: { after: 200 }
+            })] : []),
+            ...(sections.section8.collaboration ? [new Paragraph({
+              children: [
+                new TextRun({ text: 'Collaboration Opportunities: ', bold: true })
+              ],
+              spacing: { after: 50 }
+            }), new Paragraph({
+              text: sections.section8.collaboration,
+              spacing: { after: 200 }
             })] : [])
           ] : []),
 
@@ -840,31 +1102,58 @@ router.get('/:id/export/docx', async (req, res) => {
               heading: 'Heading2',
               spacing: { before: 400, after: 200 }
             }),
-            ...(sections.section9.additional_notes ? [new Paragraph({
+            ...(sections.section9.success_stories ? [new Paragraph({
               children: [
-                new TextRun({ text: 'Additional Notes: ', bold: true })
+                new TextRun({ text: 'Success Stories & Testimonials: ', bold: true })
               ],
               spacing: { after: 50 }
             }), new Paragraph({
-              text: sections.section9.additional_notes,
+              text: sections.section9.success_stories,
               spacing: { after: 200 }
             })] : []),
-            ...(sections.section9.special_requests ? [new Paragraph({
+            ...(sections.section9.communication_plan ? [new Paragraph({
               children: [
-                new TextRun({ text: 'Special Requests: ', bold: true })
+                new TextRun({ text: 'Communication Plan: ', bold: true })
               ],
               spacing: { after: 50 }
             }), new Paragraph({
-              text: sections.section9.special_requests,
+              text: sections.section9.communication_plan,
               spacing: { after: 200 }
             })] : []),
-            ...(sections.section9.other_information ? [new Paragraph({
+            ...(sections.section9.volunteer_management ? [new Paragraph({
               children: [
-                new TextRun({ text: 'Other Information: ', bold: true })
+                new TextRun({ text: 'Volunteer Management: ', bold: true })
               ],
               spacing: { after: 50 }
             }), new Paragraph({
-              text: sections.section9.other_information,
+              text: sections.section9.volunteer_management,
+              spacing: { after: 200 }
+            })] : []),
+            ...(sections.section9.evaluation_metrics ? [new Paragraph({
+              children: [
+                new TextRun({ text: 'Evaluation & Metrics: ', bold: true })
+              ],
+              spacing: { after: 50 }
+            }), new Paragraph({
+              text: sections.section9.evaluation_metrics,
+              spacing: { after: 200 }
+            })] : []),
+            ...(sections.section9.long_term_vision ? [new Paragraph({
+              children: [
+                new TextRun({ text: 'Long-Term Vision: ', bold: true })
+              ],
+              spacing: { after: 50 }
+            }), new Paragraph({
+              text: sections.section9.long_term_vision,
+              spacing: { after: 200 }
+            })] : []),
+            ...(sections.section9.additional_comments ? [new Paragraph({
+              children: [
+                new TextRun({ text: 'Additional Comments: ', bold: true })
+              ],
+              spacing: { after: 50 }
+            }), new Paragraph({
+              text: sections.section9.additional_comments,
               spacing: { after: 200 }
             })] : [])
           ] : []),
