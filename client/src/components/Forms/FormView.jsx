@@ -106,31 +106,31 @@ const FormView = () => {
 
   const canRevoke = () => {
     if (!user || !form) return false;
-    
+
     // Don't show revoke button if approve/reject buttons are visible
     if (canApprove() || canQuery()) {
       return false;
     }
-    
+
     // Admin can revoke any form (except draft, and not when approve/query buttons are shown)
     if (user.role === 'admin' && form.status !== 'draft') {
       return true;
     }
-    
+
     // Pillar can revoke forms they've already acted on (not pending_pillar, not draft)
     if (user.role === 'pillar') {
       if (form.status !== 'draft' && form.status !== 'pending_pillar') {
         return true;
       }
     }
-    
+
     // Pastor can revoke forms they've already acted on (not pending_pastor, not pending_pillar, not draft)
     if (user.role === 'pastor') {
       if (form.status !== 'draft' && form.status !== 'pending_pillar' && form.status !== 'pending_pastor') {
         return true;
       }
     }
-    
+
     return false;
   };
 
@@ -193,7 +193,7 @@ const FormView = () => {
       setShowQueryModal(false);
       // Reload form data
       await loadFormData();
-      const message = result.revoked 
+      const message = result.revoked
         ? `Query sent successfully to ${result.notifiedPillars} pillar(s). Form has been revoked and reset to pending pillar approval.`
         : `Query sent successfully to ${result.notifiedPillars} pillar(s).`;
       alert(message);
@@ -309,7 +309,7 @@ const FormView = () => {
                   Pastor Actions
                 </h3>
                 <p className="text-sm text-gray-600">
-                  Review this form and take action: approve, reject, or raise a query.
+                  Review this form and take action: approve or reject.
                 </p>
               </div>
               <div className="flex gap-3">
@@ -327,13 +327,6 @@ const FormView = () => {
                   <CheckCircle className="w-5 h-5" />
                   Accept
                 </button>
-                <button
-                  onClick={handleQueryClick}
-                  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition-colors shadow-md"
-                >
-                  <MessageCircle className="w-5 h-5" />
-                  Raise Query
-                </button>
               </div>
             </div>
           </div>
@@ -348,7 +341,7 @@ const FormView = () => {
                   Revoke Decision
                 </h3>
                 <p className="text-sm text-gray-600">
-                  {user.role === 'pillar' 
+                  {user.role === 'pillar'
                     ? 'You can revoke your decision and reset this form to pending pillar approval.'
                     : 'You can revoke your decision and reset this form to pending pastor approval.'}
                 </p>
@@ -364,13 +357,36 @@ const FormView = () => {
           </div>
         )}
 
+        {/* Amend Section - Show for Ministry Leader when form is rejected AND they are the leader of that ministry */}
+        {user?.role === 'ministry_leader' && form.status === 'rejected' && form.ministry_leader_id === user.id && (
+          <div className="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-lg p-6 mb-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 mb-1">
+                  Action Required: Amend Form
+                </h3>
+                <p className="text-sm text-gray-600">
+                  This form has been rejected. Please review the remarks and amend the form to resubmit.
+                </p>
+              </div>
+              <button
+                onClick={() => navigate(`/forms/${id}/amend`)}
+                className="flex items-center gap-2 px-6 py-3 bg-church-primary text-white rounded-lg hover:bg-church-secondary font-medium transition-colors shadow-md"
+              >
+                <FileText className="w-5 h-5" />
+                Amend Form
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Export Section */}
-          <FormExport 
-            formId={id}
-            formNumber={form.form_number}
-            ministryName={form.ministry_name}
-            status={form.status}
-          />
+        <FormExport
+          formId={id}
+          formNumber={form.form_number}
+          ministryName={form.ministry_name}
+          status={form.status}
+        />
 
         {/* Budget Summary */}
         <div className="bg-gradient-to-r from-church-primary to-church-secondary rounded-lg p-6 text-white mb-6">
@@ -606,7 +622,7 @@ const FormView = () => {
               <h3 className="text-xl font-bold text-gray-900 mb-4">
                 {approvalAction === 'approve' ? 'Approve Form' : 'Reject Form'}
               </h3>
-              
+
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Comments {approvalAction === 'reject' && <span className="text-red-500">*</span>}
@@ -632,11 +648,10 @@ const FormView = () => {
                 <button
                   onClick={handleApprovalSubmit}
                   disabled={approving || (approvalAction === 'reject' && !approvalComments.trim())}
-                  className={`px-6 py-2 text-white rounded-lg font-medium ${
-                    approvalAction === 'approve' 
-                      ? 'bg-green-600 hover:bg-green-700' 
-                      : 'bg-red-600 hover:bg-red-700'
-                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  className={`px-6 py-2 text-white rounded-lg font-medium ${approvalAction === 'approve'
+                    ? 'bg-green-600 hover:bg-green-700'
+                    : 'bg-red-600 hover:bg-red-700'
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   {approving ? 'Processing...' : `Confirm ${approvalAction === 'approve' ? 'Approval' : 'Rejection'}`}
                 </button>
@@ -652,7 +667,7 @@ const FormView = () => {
               <h3 className="text-xl font-bold text-gray-900 mb-4">
                 Raise Query
               </h3>
-              
+
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Query Description <span className="text-red-500">*</span>
@@ -707,14 +722,14 @@ const FormView = () => {
               <h3 className="text-xl font-bold text-gray-900 text-center mb-2">
                 Revoke Decision
               </h3>
-              
+
               <p className="text-gray-600 text-center mb-4">
                 Are you sure you want to revoke your decision for this form?
               </p>
 
               <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4">
                 <p className="text-sm text-gray-700 text-center">
-                  {user.role === 'pillar' 
+                  {user.role === 'pillar'
                     ? 'This will reset the form to pending pillar approval and notify pillar users.'
                     : 'This will reset the form to pending pastor approval.'}
                 </p>

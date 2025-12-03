@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { LogOut, Settings, LayoutDashboard, FileText, Bell } from 'lucide-react';
-import { notificationsService } from '../../services/notifications';
+import { formsService } from '../../services/forms';
 
 const Header = () => {
   const { user, logout } = useAuth();
@@ -17,12 +17,12 @@ const Header = () => {
     navigate('/login');
   };
 
-  // Fetch unread notification count
+  // Poll for forms and generate notifications
   useEffect(() => {
-    if (user && (user.role === 'pillar' || user.role === 'pastor')) {
-      loadNotificationCount();
-      // Poll for new notifications every 30 seconds
-      const interval = setInterval(loadNotificationCount, 30000);
+    if (user && (user.role === 'pillar' || user.role === 'pastor' || user.role === 'ministry_leader')) {
+      loadNotifications();
+      // Poll every 30 seconds
+      const interval = setInterval(loadNotifications, 30000);
       return () => clearInterval(interval);
     }
   }, [user]);
@@ -39,50 +39,102 @@ const Header = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showNotifications]);
 
-  const loadNotificationCount = async () => {
-    try {
-      const count = await notificationsService.getUnreadCount();
-      setNotificationCount(count);
-    } catch (error) {
-      console.error('Error loading notification count:', error);
-    }
-  };
-
   const loadNotifications = async () => {
     try {
-      const data = await notificationsService.getNotifications();
-      setNotifications(data.slice(0, 5)); // Show only latest 5
+      const forms = await formsService.getForms();
+      const dismissedIds = JSON.parse(localStorage.getItem(`dismissed_notifications_${user.id}`) || '[]');
+
+      let newNotifications = [];
+
+      forms.forEach(form => {
+        // Skip if already dismissed
+        if (dismissedIds.includes(form.id)) return;
+
+        if (user.role === 'ministry_leader') {
+          if (form.status === 'rejected') {
+            newNotifications.push({
+              id: form.id,
+              form_id: form.id,
+              title: 'Form Rejected',
+              message: `Form #${form.form_number} was rejected.`,
+              type: 'rejected',
+              created_at: form.rejected_at || form.updated_at
+            });
+          } else if (form.status === 'approved') {
+            // Only show approved notification if not dismissed
+            newNotifications.push({
+              id: form.id,
+              form_id: form.id,
+              title: 'Form Approved',
+              message: `Form #${form.form_number} has been fully approved!`,
+              type: 'approved',
+              created_at: form.pastor_approved_at || form.updated_at
+            });
+          }
+        } else if (user.role === 'pillar' && form.status === 'pending_pillar') {
+          newNotifications.push({
+            id: form.id,
+            form_id: form.id,
+            title: 'Approval Required',
+            message: `Form #${form.form_number} from ${form.ministry_name} needs your approval.`,
+            type: 'pending_pillar',
+            created_at: form.submitted_at || form.updated_at
+          });
+        } else if (user.role === 'pastor' && form.status === 'pending_pastor') {
+          newNotifications.push({
+            id: form.id,
+            form_id: form.id,
+            title: 'Approval Required',
+            message: `Form #${form.form_number} from ${form.ministry_name} needs your approval.`,
+            type: 'pending_pastor',
+            created_at: form.pillar_approved_at || form.updated_at
+          });
+        }
+      });
+
+      // Sort by date desc
+      newNotifications.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+      setNotifications(newNotifications);
+      setNotificationCount(newNotifications.length);
+
     } catch (error) {
       console.error('Error loading notifications:', error);
     }
   };
 
-  const handleNotificationClick = async () => {
+  const handleNotificationClick = () => {
     setShowNotifications(!showNotifications);
-    if (!showNotifications) {
-      await loadNotifications();
-    }
   };
 
-  const handleNotificationItemClick = async (notification) => {
-    try {
-      await notificationsService.markAsRead(notification.id);
-      setNotificationCount(prev => Math.max(0, prev - 1));
-      setShowNotifications(false);
+  const handleNotificationItemClick = (notification) => {
+    // Add to dismissed list in localStorage
+    const dismissedIds = JSON.parse(localStorage.getItem(`dismissed_notifications_${user.id}`) || '[]');
+    if (!dismissedIds.includes(notification.id)) {
+      dismissedIds.push(notification.id);
+      localStorage.setItem(`dismissed_notifications_${user.id}`, JSON.stringify(dismissedIds));
+    }
+
+    // Update state
+    setNotifications(prev => prev.filter(n => n.id !== notification.id));
+    setNotificationCount(prev => Math.max(0, prev - 1));
+    setShowNotifications(false);
+
+    // Navigate
+    if (notification.type === 'rejected' && user.role === 'ministry_leader') {
+      navigate(`/forms/${notification.form_id}/amend`);
+    } else {
       navigate(`/forms/${notification.form_id}/view`);
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
     }
   };
 
-  const handleMarkAllRead = async () => {
-    try {
-      await notificationsService.markAllAsRead();
-      setNotificationCount(0);
-      await loadNotifications();
-    } catch (error) {
-      console.error('Error marking all as read:', error);
-    }
+  const handleMarkAllRead = () => {
+    const dismissedIds = JSON.parse(localStorage.getItem(`dismissed_notifications_${user.id}`) || '[]');
+    const newDismissedIds = [...dismissedIds, ...notifications.map(n => n.id)];
+    localStorage.setItem(`dismissed_notifications_${user.id}`, JSON.stringify([...new Set(newDismissedIds)]));
+
+    setNotifications([]);
+    setNotificationCount(0);
   };
 
   return (
@@ -115,7 +167,7 @@ const Header = () => {
               <LayoutDashboard size={18} />
               <span>Dashboard</span>
             </Link>
-            
+
             <Link
               to="/forms"
               className="flex items-center gap-2 text-gray-700 hover:text-church-green transition-colors"
@@ -144,8 +196,8 @@ const Header = () => {
               </p>
             </div>
 
-            {/* Notification Bell - Only for pillar and pastor */}
-            {(user?.role === 'pillar' || user?.role === 'pastor') && (
+            {/* Notification Bell - Only for pillar, pastor, and ministry_leader */}
+            {(user?.role === 'pillar' || user?.role === 'pastor' || user?.role === 'ministry_leader') && (
               <div className="relative notification-container">
                 <button
                   onClick={handleNotificationClick}
@@ -169,7 +221,7 @@ const Header = () => {
                           onClick={handleMarkAllRead}
                           className="text-xs text-blue-600 hover:text-blue-800"
                         >
-                          Mark all read
+                          Clear all
                         </button>
                       )}
                     </div>
@@ -177,21 +229,17 @@ const Header = () => {
                       {notifications.length === 0 ? (
                         <div className="p-8 text-center text-gray-500">
                           <Bell size={32} className="mx-auto mb-2 opacity-50" />
-                          <p className="text-sm">No notifications</p>
+                          <p className="text-sm">No new notifications</p>
                         </div>
                       ) : (
                         notifications.map((notification) => (
                           <div
                             key={notification.id}
                             onClick={() => handleNotificationItemClick(notification)}
-                            className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors ${
-                              !notification.is_read ? 'bg-blue-50' : ''
-                            }`}
+                            className="p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors bg-blue-50"
                           >
                             <div className="flex items-start gap-3">
-                              <div className={`flex-shrink-0 w-2 h-2 rounded-full mt-2 ${
-                                !notification.is_read ? 'bg-blue-600' : 'bg-gray-300'
-                              }`} />
+                              <div className="flex-shrink-0 w-2 h-2 rounded-full mt-2 bg-blue-600" />
                               <div className="flex-1">
                                 <h4 className="font-medium text-sm text-gray-900">
                                   {notification.title}
@@ -200,9 +248,16 @@ const Header = () => {
                                   {notification.message}
                                 </p>
                                 <p className="text-xs text-gray-400 mt-1">
-                                  {new Date(notification.created_at).toLocaleDateString()} at{' '}
-                                  {new Date(notification.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  {new Date(notification.created_at).toLocaleDateString()}
                                 </p>
+                                {notification.type === 'rejected' && (
+                                  <button
+                                    className="mt-2 px-3 py-1 bg-church-primary text-white text-xs rounded hover:bg-church-secondary transition-colors flex items-center gap-1"
+                                  >
+                                    <FileText size={12} />
+                                    Amend Form
+                                  </button>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -213,7 +268,7 @@ const Header = () => {
                 )}
               </div>
             )}
-            
+
             <button
               onClick={handleLogout}
               className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"

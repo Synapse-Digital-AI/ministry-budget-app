@@ -502,7 +502,8 @@ router.post('/:id/submit', async (req, res) => {
         await pool.query(
           `INSERT INTO notifications (user_id, form_id, type, title, message)
            VALUES ($1, $2, $3, $4, $5)
-           ON CONFLICT (user_id, form_id, type) DO NOTHING`,
+           ON CONFLICT (user_id, form_id, type) 
+           DO UPDATE SET read = false, created_at = CURRENT_TIMESTAMP, message = EXCLUDED.message`,
           [
             pillar.id,
             formId,
@@ -534,10 +535,11 @@ router.post('/:id/approve', validateApproval, async (req, res) => {
     const { action, comments, signature } = req.body;
     const { id: userId, role } = req.user;
 
-    // Get form details
+    // Get form details including ministry info for notifications
     const formResult = await pool.query(
-      `SELECT f.status
+      `SELECT f.status, f.ministry_leader_id, f.form_number, m.name as ministry_name
        FROM ministry_forms f
+       LEFT JOIN ministries m ON f.ministry_id = m.id
        WHERE f.id = $1`,
       [formId]
     );
@@ -546,7 +548,7 @@ router.post('/:id/approve', validateApproval, async (req, res) => {
       return res.status(404).json({ error: 'Form not found' });
     }
 
-    const { status: currentStatus } = formResult.rows[0];
+    const { status: currentStatus, ministry_leader_id, form_number, ministry_name } = formResult.rows[0];
 
     // Standard approval check (includes affiliated ministry check for pillars)
     const approveCheck = await canApproveForm(pool, userId, role, formId);
@@ -573,6 +575,33 @@ router.post('/:id/approve', validateApproval, async (req, res) => {
            WHERE id = $2`,
           [newStatus, formId]
         );
+
+        // Notify all pastor users
+        const pastorResult = await pool.query(
+          `SELECT id FROM users WHERE role = 'pastor' AND active = true`
+        );
+
+        for (const pastor of pastorResult.rows) {
+          try {
+            const remarkText = comments ? ` Pillar Remark: "${comments}"` : '';
+            await pool.query(
+              `INSERT INTO notifications (user_id, form_id, type, title, message)
+               VALUES ($1, $2, $3, $4, $5)
+               ON CONFLICT (user_id, form_id, type) 
+               DO UPDATE SET read = false, created_at = CURRENT_TIMESTAMP, message = EXCLUDED.message`,
+              [
+                pastor.id,
+                formId,
+                'form_approval_needed',
+                'New Form Awaiting Approval',
+                `Form ${form_number} from ${ministry_name} has been approved by Pillar and is waiting for your approval.${remarkText}`
+              ]
+            );
+          } catch (notifError) {
+            console.error('Failed to create notification for pastor:', notifError);
+          }
+        }
+
       } else if (currentStatus === 'pending_pastor') {
         newStatus = 'approved';
         auditAction = 'pastor_approved';
@@ -587,6 +616,24 @@ router.post('/:id/approve', validateApproval, async (req, res) => {
            WHERE id = $2`,
           [newStatus, formId]
         );
+
+        // Notify Ministry Leader of final approval
+        try {
+          await pool.query(
+            `INSERT INTO notifications (user_id, form_id, type, title, message)
+               VALUES ($1, $2, $3, $4, $5)
+               ON CONFLICT (user_id, form_id, type) DO NOTHING`,
+            [
+              ministry_leader_id,
+              formId,
+              'form_approved',
+              'Form Approved',
+              `Your Form ${form_number} has been fully approved!`
+            ]
+          );
+        } catch (notifError) {
+          console.error('Failed to create notification for leader:', notifError);
+        }
       }
 
       await pool.query(
@@ -604,17 +651,55 @@ router.post('/:id/approve', validateApproval, async (req, res) => {
         `UPDATE ministry_forms 
          SET status = 'rejected',
              current_approver_role = NULL,
+             rejected_at = CURRENT_TIMESTAMP,
              rejection_reason = $1,
              updated_at = CURRENT_TIMESTAMP
          WHERE id = $2`,
         [comments, formId]
       );
 
+      // Notify Ministry Leader of rejection
+      try {
+        await pool.query(
+          `INSERT INTO notifications (user_id, form_id, type, title, message)
+           VALUES ($1, $2, $3, $4, $5)
+           ON CONFLICT (user_id, form_id, type) 
+           DO UPDATE SET read = false, created_at = CURRENT_TIMESTAMP, message = EXCLUDED.message`,
+          [
+            ministry_leader_id,
+            formId,
+            'form_rejected',
+            'Form Rejected',
+            `Your Form ${form_number} has been rejected by ${role === 'pillar' ? 'Pillar' : 'Pastor'}. Reason: ${comments}`
+          ]
+        );
+      } catch (notifError) {
+        console.error('Failed to create notification for leader:', notifError);
+      }
+
       await pool.query(
         `INSERT INTO approvals (form_id, user_id, role, action, comments)
          VALUES ($1, $2, $3, 'rejected', $4)`,
         [formId, userId, role, comments]
       );
+
+      // Notify Ministry Leader of rejection
+      try {
+        await pool.query(
+          `INSERT INTO notifications (user_id, form_id, type, title, message)
+           VALUES ($1, $2, $3, $4, $5)
+           ON CONFLICT (user_id, form_id, type) DO NOTHING`,
+          [
+            ministry_leader_id,
+            formId,
+            'form_rejected',
+            'Form Rejected',
+            `Your Form ${form_number} was rejected by ${role === 'pillar' ? 'Pillar' : 'Pastor'}. Remark: ${comments}`
+          ]
+        );
+      } catch (notifError) {
+        console.error('Failed to create notification for leader:', notifError);
+      }
     }
 
     await pool.query(

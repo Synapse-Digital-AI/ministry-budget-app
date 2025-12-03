@@ -67,7 +67,7 @@ const FormBuilder = () => {
       setGoalsComplete(data.isComplete);
       return; // Don't save events/goals data to formData
     }
-    
+
     setFormData(prev => ({
       ...prev,
       [sectionKey]: data
@@ -98,7 +98,7 @@ const FormBuilder = () => {
   const handleSubmit = async () => {
     // Check if all sections are complete
     const incompleteSections = getIncompleteSections();
-    
+
     if (incompleteSections.length > 0) {
       const sectionNames = incompleteSections.map(s => s.title).join(', ');
       setError(`Cannot submit form. The following sections are incomplete: ${sectionNames}`);
@@ -155,13 +155,13 @@ const FormBuilder = () => {
   const getCompletionPercentage = () => {
     const totalSections = SECTIONS.length;
     let completed = 0;
-    
+
     SECTIONS.forEach(section => {
       if (isSectionComplete(section.key)) {
         completed++;
       }
     });
-    
+
     return Math.round((completed / totalSections) * 100);
   };
 
@@ -226,6 +226,17 @@ const FormBuilder = () => {
       <div className="max-w-5xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          {/* Rejection Remark for Amend Mode */}
+          {window.location.pathname.includes('/amend') && form.rejection_reason && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+              <h3 className="text-red-800 font-bold flex items-center gap-2 mb-2">
+                <AlertCircle size={20} />
+                Rejection Remark
+              </h3>
+              <p className="text-red-700">{form.rejection_reason}</p>
+            </div>
+          )}
+
           <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">

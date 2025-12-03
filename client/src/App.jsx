@@ -10,7 +10,7 @@ import Dashboard from './components/Dashboard/Dashboard';
 import FormCreate from './components/Forms/FormCreate';
 import FormBuilder from './components/Forms/FormBuilder';
 import FormView from './components/Forms/FormView';
-import FormApproval from './components/Forms/FormApproval';
+
 import FormsList from './components/Forms/FormsList';
 
 // Phase 3.3 - Admin Components
@@ -31,7 +31,7 @@ function App() {
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
-          
+
           {/* Protected Routes */}
           <Route
             path="/dashboard"
@@ -51,7 +51,7 @@ function App() {
               </ProtectedRoute>
             }
           />
-          
+
           <Route
             path="/forms/create"
             element={
@@ -60,7 +60,7 @@ function App() {
               </ProtectedRoute>
             }
           />
-          
+
           <Route
             path="/forms/:id/edit"
             element={
@@ -69,7 +69,16 @@ function App() {
               </ProtectedRoute>
             }
           />
-          
+
+          <Route
+            path="/forms/:id/amend"
+            element={
+              <ProtectedRoute allowedRoles={['ministry_leader', 'admin']}>
+                <FormBuilder />
+              </ProtectedRoute>
+            }
+          />
+
           <Route
             path="/forms/:id/view"
             element={
@@ -78,15 +87,8 @@ function App() {
               </ProtectedRoute>
             }
           />
-          
-          <Route
-            path="/forms/:id/approve"
-            element={
-              <ProtectedRoute allowedRoles={['pillar', 'pastor', 'admin']}>
-                <FormApproval />
-              </ProtectedRoute>
-            }
-          />
+
+
 
           {/* Admin Routes - Phase 3.3 */}
           <Route
@@ -97,7 +99,7 @@ function App() {
               </ProtectedRoute>
             }
           />
-          
+
           <Route
             path="/admin/ministries"
             element={
@@ -106,7 +108,7 @@ function App() {
               </ProtectedRoute>
             }
           />
-          
+
           <Route
             path="/admin/event-types"
             element={
@@ -115,7 +117,7 @@ function App() {
               </ProtectedRoute>
             }
           />
-          
+
           <Route
             path="/admin/users"
             element={
@@ -127,7 +129,7 @@ function App() {
 
           {/* Default Route - redirects based on auth status */}
           <Route path="/" element={<RootRoute />} />
-          
+
           {/* 404 Route - redirect to login if not authenticated */}
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
