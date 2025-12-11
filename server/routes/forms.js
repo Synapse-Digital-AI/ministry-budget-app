@@ -42,6 +42,7 @@ router.get('/', async (req, res) => {
       params = [];
     } else if (role === 'pillar') {
       // Pillars see forms from their assigned ministries
+      // Check if user ID is in the assigned_pillars array
       query = `
         SELECT 
           f.id, f.form_number, f.status, f.ministry_leader_id,
@@ -52,11 +53,12 @@ router.get('/', async (req, res) => {
         LEFT JOIN ministries m ON f.ministry_id = m.id
         LEFT JOIN users u ON f.ministry_leader_id = u.id
         WHERE f.status NOT IN ('draft')
+        AND $1 = ANY(m.assigned_pillars)
         ORDER BY f.updated_at DESC
       `;
-      params = [];
+      params = [userId];
     } else if (role === 'ministry_leader') {
-      // Ministry leaders see all forms but can only edit their own
+      // Ministry leaders see ONLY their own forms
       query = `
         SELECT 
           f.id, f.form_number, f.status, f.ministry_leader_id,
@@ -66,9 +68,10 @@ router.get('/', async (req, res) => {
         FROM ministry_forms f
         LEFT JOIN ministries m ON f.ministry_id = m.id
         LEFT JOIN users u ON f.ministry_leader_id = u.id
+        WHERE f.ministry_leader_id = $1
         ORDER BY f.updated_at DESC
       `;
-      params = [];
+      params = [userId];
     } else {
       return res.status(403).json({ error: 'Insufficient permissions' });
     }
@@ -95,6 +98,7 @@ router.get('/:id', async (req, res) => {
       `SELECT 
         f.*, 
         m.name as ministry_name,
+        m.assigned_pillars,
         u.name as leader_name, 
         u.email as leader_email
       FROM ministry_forms f
@@ -111,17 +115,23 @@ router.get('/:id', async (req, res) => {
     const form = formResult.rows[0];
 
     // Check if user has permission to view
-    // Check if user has permission to view
-    // Ministry leaders can now view all forms (read-only if not theirs)
-    /* 
+
+    // Ministry leaders can only view their own forms
     if (role === 'ministry_leader' && form.ministry_leader_id !== userId) {
       return res.status(403).json({ error: 'You can only view your own forms' });
     }
-    */
 
-    // Pillars can view all submitted forms
-    if (role === 'pillar' && form.status === 'draft') {
-      return res.status(403).json({ error: 'You can only view submitted forms' });
+    // Pillars can only view forms from their assigned ministries
+    if (role === 'pillar') {
+      const assignedPillars = form.assigned_pillars || [];
+      if (!assignedPillars.includes(userId)) {
+        return res.status(403).json({ error: 'You can only view forms for your assigned ministries' });
+      }
+
+      // Also ensure it's not a draft
+      if (form.status === 'draft') {
+        return res.status(403).json({ error: 'You can only view submitted forms' });
+      }
     }
 
     // Get form sections data
@@ -501,9 +511,7 @@ router.post('/:id/submit', async (req, res) => {
       try {
         await pool.query(
           `INSERT INTO notifications (user_id, form_id, type, title, message)
-           VALUES ($1, $2, $3, $4, $5)
-           ON CONFLICT (user_id, form_id, type) 
-           DO UPDATE SET read = false, created_at = CURRENT_TIMESTAMP, message = EXCLUDED.message`,
+           VALUES ($1, $2, $3, $4, $5)`,
           [
             pillar.id,
             formId,
@@ -586,9 +594,7 @@ router.post('/:id/approve', validateApproval, async (req, res) => {
             const remarkText = comments ? ` Pillar Remark: "${comments}"` : '';
             await pool.query(
               `INSERT INTO notifications (user_id, form_id, type, title, message)
-               VALUES ($1, $2, $3, $4, $5)
-               ON CONFLICT (user_id, form_id, type) 
-               DO UPDATE SET read = false, created_at = CURRENT_TIMESTAMP, message = EXCLUDED.message`,
+               VALUES ($1, $2, $3, $4, $5)`,
               [
                 pastor.id,
                 formId,
@@ -621,8 +627,7 @@ router.post('/:id/approve', validateApproval, async (req, res) => {
         try {
           await pool.query(
             `INSERT INTO notifications (user_id, form_id, type, title, message)
-               VALUES ($1, $2, $3, $4, $5)
-               ON CONFLICT (user_id, form_id, type) DO NOTHING`,
+               VALUES ($1, $2, $3, $4, $5)`,
             [
               ministry_leader_id,
               formId,
@@ -662,9 +667,7 @@ router.post('/:id/approve', validateApproval, async (req, res) => {
       try {
         await pool.query(
           `INSERT INTO notifications (user_id, form_id, type, title, message)
-           VALUES ($1, $2, $3, $4, $5)
-           ON CONFLICT (user_id, form_id, type) 
-           DO UPDATE SET read = false, created_at = CURRENT_TIMESTAMP, message = EXCLUDED.message`,
+           VALUES ($1, $2, $3, $4, $5)`,
           [
             ministry_leader_id,
             formId,
@@ -683,23 +686,7 @@ router.post('/:id/approve', validateApproval, async (req, res) => {
         [formId, userId, role, comments]
       );
 
-      // Notify Ministry Leader of rejection
-      try {
-        await pool.query(
-          `INSERT INTO notifications (user_id, form_id, type, title, message)
-           VALUES ($1, $2, $3, $4, $5)
-           ON CONFLICT (user_id, form_id, type) DO NOTHING`,
-          [
-            ministry_leader_id,
-            formId,
-            'form_rejected',
-            'Form Rejected',
-            `Your Form ${form_number} was rejected by ${role === 'pillar' ? 'Pillar' : 'Pastor'}. Remark: ${comments}`
-          ]
-        );
-      } catch (notifError) {
-        console.error('Failed to create notification for leader:', notifError);
-      }
+      /* Duplicate notification removed */
     }
 
     await pool.query(
@@ -780,9 +767,7 @@ router.post('/:id/revoke', async (req, res) => {
         try {
           await pool.query(
             `INSERT INTO notifications (user_id, form_id, type, title, message)
-             VALUES ($1, $2, $3, $4, $5)
-             ON CONFLICT (user_id, form_id, type) DO UPDATE
-             SET message = EXCLUDED.message, is_read = FALSE, created_at = CURRENT_TIMESTAMP`,
+             VALUES ($1, $2, $3, $4, $5)`,
             [
               pillar.id,
               formId,
@@ -850,9 +835,7 @@ router.post('/:id/revoke', async (req, res) => {
         try {
           await pool.query(
             `INSERT INTO notifications (user_id, form_id, type, title, message)
-             VALUES ($1, $2, $3, $4, $5)
-             ON CONFLICT (user_id, form_id, type) DO UPDATE
-             SET message = EXCLUDED.message, is_read = FALSE, created_at = CURRENT_TIMESTAMP`,
+             VALUES ($1, $2, $3, $4, $5)`,
             [
               pillar.id,
               formId,
@@ -911,9 +894,7 @@ router.post('/:id/revoke', async (req, res) => {
         try {
           await pool.query(
             `INSERT INTO notifications (user_id, form_id, type, title, message)
-             VALUES ($1, $2, $3, $4, $5)
-             ON CONFLICT (user_id, form_id, type) DO UPDATE
-             SET message = EXCLUDED.message, is_read = FALSE, created_at = CURRENT_TIMESTAMP`,
+             VALUES ($1, $2, $3, $4, $5)`,
             [
               pastor.id,
               formId,
@@ -1019,9 +1000,7 @@ router.post('/:id/query', async (req, res) => {
       try {
         await pool.query(
           `INSERT INTO notifications (user_id, form_id, type, title, message)
-           VALUES ($1, $2, $3, $4, $5)
-           ON CONFLICT (user_id, form_id, type) DO UPDATE
-           SET message = EXCLUDED.message, is_read = FALSE, created_at = CURRENT_TIMESTAMP`,
+           VALUES ($1, $2, $3, $4, $5)`,
           [
             pillar.id,
             formId,

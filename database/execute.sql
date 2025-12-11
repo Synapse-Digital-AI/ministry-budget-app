@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS ministry_forms (
     submitted_at TIMESTAMP,
     pillar_approved_at TIMESTAMP,
     pastor_approved_at TIMESTAMP,
+    rejected_at TIMESTAMP,
     rejection_reason TEXT
 );
 
@@ -324,16 +325,17 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 
 -- Add unique constraint if it doesn't exist
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.table_constraints 
-        WHERE constraint_name = 'notifications_user_form_unique' 
-        AND table_name = 'notifications'
-    ) THEN
-        ALTER TABLE notifications ADD CONSTRAINT notifications_user_form_unique UNIQUE(user_id, form_id, type);
-    END IF;
-END $$;
+-- Unique constraint removed to allow multiple notifications
+-- DO $$
+-- BEGIN
+--     IF NOT EXISTS (
+--         SELECT 1 FROM information_schema.table_constraints 
+--         WHERE constraint_name = 'notifications_user_form_unique' 
+--         AND table_name = 'notifications'
+--     ) THEN
+--         ALTER TABLE notifications ADD CONSTRAINT notifications_user_form_unique UNIQUE(user_id, form_id, type);
+--     END IF;
+-- END $$;
 
 -- Create indexes
 CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
