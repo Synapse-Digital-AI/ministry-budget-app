@@ -13,7 +13,7 @@ export const AuthProvider = ({ children }) => {
     const checkAuth = async () => {
       const token = authService.getToken();
       const savedUser = authService.getCurrentUser();
-      
+
       if (token && savedUser) {
         try {
           // Verify token is still valid with backend
@@ -45,10 +45,10 @@ export const AuthProvider = ({ children }) => {
         // No token or user, ensure clean state
         setUser(null);
       }
-      
+
       setLoading(false);
     };
-    
+
     checkAuth();
   }, []);
 
@@ -61,6 +61,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    localStorage.clear();
     authService.logout();
     setUser(null);
   };
